@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Notes Wrapped</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+
+        :root {
+            --bg: #121212;
+            --text: #ffffff;
+            --accent: #F28B82;
+        }
+
+        body {
+            margin: 0;
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            overflow: hidden; /* Hide scrollbars */
+        }
+
+        .scroll-container {
+            height: 100vh;
+            overflow-y: scroll;
+            scroll-snap-type: y mandatory;
+            scroll-behavior: smooth;
+        }
+
+        .slide {
+            height: 100vh;
+            width: 100%;
+            scroll-snap-align: start;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            box-sizing: border-box;
+            position: relative;
+            opacity: 0;
+            transition: opacity 1s ease-in-out;
+        }
+
+        .slide.visible { opacity: 1; }
+
+        h1 { font-size: 4rem; margin: 0; font-weight: 900; text-transform: uppercase; text-align: center; }
+        h2 { font-size: 2rem; color: #888; margin-top: 10px; font-weight: 400; }
+        .big-number { font-size: 8rem; font-weight: 900; color: var(--accent); line-height: 1; }
+        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; text-align: center; margin-top: 40px; }
+        .stat-item span { display: block; font-size: 1.5rem; color: #888; }
+        .stat-item b { font-size: 3rem; color: white; }
+
+        .chart-container { width: 80%; max-width: 800px; height: 400px; }
+
+        /* Animation classes */
+        .fade-up { transform: translateY(50px); opacity: 0; transition: all 0.8s ease; }
+        .visible .fade-up { transform: translateY(0); opacity: 1; }
+
+        /* Slide Specifics */
+        .bg-1 { background: radial-gradient(circle at center, #2c2c2c 0%, #121212 100%); }
+        .bg-2 { background-color: #000; }
+        
+        .word-cloud { display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; max-width: 900px; }
+        .word { transition: 0.3s; cursor: default; }
+        .word:hover { transform: scale(1.2); color: var(--accent) !important; }
+
+        .color-dot { display: inline-block; width: 20px; height: 20px; border-radius: 50%; margin-right: 10px; border: 1px solid #333;}
+    </style>
+</head>
+<body>
+
+<div class="scroll-container" id="scroller">
+
+    <!-- Slide 1: Intro -->
+    <section class="slide bg-1 visible">
+        <div class="fade-up">
+            <h2>Welcome to your</h2>
+            <h1>Keep<br>Wrapped</h1>
+            <p style="text-align:center; margin-top:20px;">Scroll to begin</p>
+        </div>
+    </section>
+
+    <!-- Slide 2: The Big Stats -->
+    <section class="slide bg-2">
+        <div class="fade-up" style="text-align: center;">
+            <h2>You created</h2>
+            <div class="big-number">{{ stats.total_notes }}</div>
+            <h2>Notes</h2>
+        </div>
+        <div class="stat-grid fade-up">
+            <div class="stat-item"><b>{{ stats.total_lists }}</b><span>Checklists</span></div>
+            <div class="stat-item"><b>{{ stats.total_images }}</b><span>Images</span></div>
+            <div class="stat-item"><b>{{ stats.total_voice }}</b><span>Voice Notes</span></div>
+            <div class="stat-item"><b>{{ stats.char_count // 1000 }}k</b><span>Characters typed</span></div>
+        </div>
+    </section>
+
+    <!-- Slide 3: Timeline -->
+    <section class="slide bg-1">
+        <h1 class="fade-up" style="font-size: 3rem; margin-bottom: 30px;">Your Timeline</h1>
+        <div class="chart-container fade-up">
+            <canvas id="timelineChart"></canvas>
+        </div>
+    </section>
+
+    <!-- Slide 4: Colors -->
+    <section class="slide bg-2">
+        <h1 class="fade-up" style="font-size: 3rem;">Your Palette</h1>
+        <div class="chart-container fade-up" style="height: 50vh;">
+            <canvas id="colorChart"></canvas>
+        </div>
+    </section>
+
+    <!-- Slide 5: Words & Vibes -->
+    <section class="slide bg-1">
+        <h2 class="fade-up">Top Topics</h2>
+        <div class="word-cloud fade-up" style="margin: 40px 0;">
+            {% for word, count in stats.word_cloud %}
+                {% set size = 1 + (count / stats.word_cloud[0][1]) * 3 %}
+                <span class="word" style="font-size: {{ size }}rem; color: rgba(255,255,255, {{ 0.3 + (count/stats.word_cloud[0][1]) }})">
+                    {{ word }}
+                </span>
+            {% endfor %}
+        </div>
+        <div class="fade-up" style="text-align: center; margin-top: 20px;">
+            <h2>Your Vibe Score</h2>
+            <h1 style="color: {% if stats.sentiment_score > 0 %}#CCFF90{% else %}#F28B82{% endif %}">
+                {% if stats.sentiment_score > 0.1 %}Positive ✨
+                {% elif stats.sentiment_score < -0.1 %}Gloomy 🌧️
+                {% else %}Neutral 😐{% endif %}
+            </h1>
+        </div>
+    </section>
+
+    <!-- Slide 6: Outro -->
+    <section class="slide bg-2">
+        <div class="fade-up" style="text-align: center;">
+            <h2>Oldest memory from</h2>
+            <h1>{{ stats.oldest_date }}</h1>
+            <br><br>
+            <a href="/" style="color: var(--accent); text-decoration: none; font-size: 1.5rem; border-bottom: 2px solid;">Upload another</a>
+        </div>
+    </section>
+
+</div>
+
+<script>
+    // Intersection Observer for animations
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+            }
+        });
+    }, { threshold: 0.5 });
+
+    document.querySelectorAll('.slide').forEach((section) => {
+        observer.observe(section);
+    });
+
+    // Data from Flask
+    const timelineData = {{ stats.timeline | tojson }};
+    const colorData = {{ stats.colors | tojson }};
+    const colorMap = {{ color_map | tojson }};
+
+    // Timeline Chart
+    const ctxTime = document.getElementById('timelineChart').getContext('2d');
+    new Chart(ctxTime, {
+        type: 'line',
+        data: {
+            labels: Object.keys(timelineData),
+            datasets: [{
+                label: 'Notes Created',
+                data: Object.values(timelineData),
+                borderColor: '#F28B82',
+                backgroundColor: 'rgba(242, 139, 130, 0.2)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: { grid: { color: '#333' } },
+                x: { grid: { display: false } }
+            },
+            plugins: { legend: { display: false } }
+        }
+    });
+
+    // Color Chart
+    const ctxColor = document.getElementById('colorChart').getContext('2d');
+    const colorLabels = Object.keys(colorData);
+    const colorValues = Object.values(colorData);
+    const bgColors = colorLabels.map(k => colorMap[k] || '#333');
+
+    new Chart(ctxColor, {
+        type: 'doughnut',
+        data: {
+            labels: colorLabels,
+            datasets: [{
+                data: colorValues,
+                backgroundColor: bgColors,
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'bottom', labels: { color: 'white' } } }
+        }
+    });
+</script>
+
+</body>
+</html>
