@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Keep Wrapped</title>
+    <style>
+        body {
+            background-color: #121212;
+            color: white;
+            font-family: 'Helvetica Neue', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            text-align: center;
+        }
+        .container {
+            border: 2px dashed #F28B82;
+            padding: 40px;
+            border-radius: 20px;
+            max-width: 500px;
+        }
+        h1 { font-size: 3rem; margin-bottom: 10px; background: linear-gradient(45deg, #F28B82, #FBBC04); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        p { color: #aaa; margin-bottom: 30px; }
+        input[type="file"] { display: none; }
+        .btn {
+            background: #FBBC04;
+            color: #121212;
+            padding: 15px 30px;
+            border-radius: 50px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+            border: none;
+            font-size: 1.2rem;
+        }
+        .btn:hover { transform: scale(1.05); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Keep Wrapped</h1>
+        <p>Export your Google Keep data via Google Takeout as a JSON ZIP file and upload it here to see your note-taking year in review.</p>
+        <form method="POST" enctype="multipart/form-data">
+            <label for="file" class="btn">Choose ZIP File</label>
+            <input type="file" name="file" id="file" accept=".zip" onchange="this.form.submit()">
+        </form>
+    </div>
+</body>
+</html>
