@@ -5,6 +5,8 @@ import datetime
 import calendar
 import re
 import random
+import logging
+import sys
 import google.generativeai as genai
 from collections import Counter
 from flask import Flask, render_template, request, redirect, url_for
@@ -15,12 +17,21 @@ import shutil
 import nltk
 from nltk.corpus import stopwords
 
+# --- LOGGING CONFIGURATION ---
+# This sets up the logger to print to the console (stderr) which is visible in Render logs.
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(message)s',
+    handlers=[logging.StreamHandler(sys.stdout)]
+)
+logger = logging.getLogger(__name__)
+
 # --- CONFIGURATION & SETUP ---
 
-# Download NLTK data if not present
 try:
     nltk.data.find('corpora/stopwords')
 except LookupError:
+    logger.info("Downloading NLTK Stopwords...")
     nltk.download('stopwords')
 
 app = Flask(__name__)
@@ -35,11 +46,9 @@ COLOR_MAP = {
 
 # --- PII & PRIVACY FILTERS ---
 
-# Regex patterns for sensitive data
 EMAIL_REGEX = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
 PHONE_REGEX = r'\b(\+\d{1,2}\s)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}\b'
 CREDIT_CARD_REGEX = r'\b(?:\d[ -]*?){13,16}\b'
-# Keywords that flag a note as "unsafe" for AI sharing
 SENSITIVE_KEYWORDS = [
     "password", "passwd", "secret", "key", "token", "ssn", "social security", 
     "bank", "account number", "routing", "credit card", "debit card", "pin", 
@@ -47,14 +56,12 @@ SENSITIVE_KEYWORDS = [
 ]
 
 def clean_pii(text):
-    """Redacts emails and phone numbers from text."""
     text = re.sub(EMAIL_REGEX, "[EMAIL REDACTED]", text)
     text = re.sub(PHONE_REGEX, "[PHONE REDACTED]", text)
     text = re.sub(CREDIT_CARD_REGEX, "[CARD REDACTED]", text)
     return text
 
 def is_content_safe(text):
-    """Returns False if text contains sensitive keywords."""
     text_lower = text.lower()
     for kw in SENSITIVE_KEYWORDS:
         if kw in text_lower:
@@ -65,7 +72,8 @@ def is_content_safe(text):
 
 def analyze_year(extract_path, api_key=None, share_content=False):
     target_year = datetime.datetime.now().year
-    # target_year = 2024 # Uncomment for testing older zips
+    
+    logger.info(f"Starting analysis for year: {target_year}")
     
     analyzer = SentimentIntensityAnalyzer()
     stop_words = set(stopwords.words('english'))
@@ -92,21 +100,29 @@ def analyze_year(extract_path, api_key=None, share_content=False):
         "dreams": [],
         "ai_summary": {"archetype": "The Mystery", "description": "AI analysis was skipped or failed."},
         "aura": {"productive": 0, "creative": 0, "emotional": 0, "chaotic": 0},
-        "content_samples": [] # Temporarily store safe notes for AI
+        "content_samples": []
     }
 
-    notes_processed = 0
+    files_processed_count = 0
+    errors_count = 0
 
     for root, dirs, files in os.walk(extract_path):
         for file in files:
             if file.endswith(".json"):
+                full_path = os.path.join(root, file)
                 try:
-                    with open(os.path.join(root, file), 'r', encoding='utf-8') as f:
+                    with open(full_path, 'r', encoding='utf-8') as f:
                         data = json.load(f)
 
                         # Timestamp handling
-                        ts_usec = int(data.get("userEditedTimestampUsec", data.get("createdTimestampUsec", 0)))
-                        dt = datetime.datetime.fromtimestamp(ts_usec / 1_000_000)
+                        # Note: Keep timestamps are in microseconds
+                        ts_raw = data.get("userEditedTimestampUsec", data.get("createdTimestampUsec", 0))
+                        try:
+                            ts_usec = int(ts_raw)
+                            dt = datetime.datetime.fromtimestamp(ts_usec / 1_000_000)
+                        except (ValueError, TypeError) as e:
+                            logger.warning(f"Invalid timestamp in file {file}: {ts_raw}. Error: {e}")
+                            continue
                         
                         if dt.year != target_year or data.get("isTrashed"): continue
 
@@ -140,8 +156,9 @@ def analyze_year(extract_path, api_key=None, share_content=False):
 
                         # Longest Note
                         if char_len > stats["longest_note"]["len"]:
+                            safe_preview = full_text[:400] + "..." if char_len > 400 else full_text
                             stats["longest_note"] = {
-                                "text": full_text[:400] + "..." if char_len > 400 else full_text,
+                                "text": safe_preview,
                                 "len": char_len,
                                 "date": dt.strftime("%B %d")
                             }
@@ -162,7 +179,6 @@ def analyze_year(extract_path, api_key=None, share_content=False):
                         for l in data.get("labels", []):
                             name = l['name']
                             stats["tags"][name] += 1
-                            # Heuristics
                             nl = name.lower()
                             if nl in ['gym', 'workout', 'health', 'food', 'diet']: stats["topics"]['Health & Body'] += 1
                             elif nl in ['code', 'dev', 'work', 'job', 'meeting', 'to-do']: stats["topics"]['The Grind'] += 1
@@ -190,51 +206,74 @@ def analyze_year(extract_path, api_key=None, share_content=False):
                             elif char_len > 500: stats["aura"]["creative"] += 4
                             elif char_len < 10: stats["aura"]["chaotic"] += 1
 
-                            # Sample Collection for AI (if safe)
+                            # Sample Collection for AI
                             if share_content and is_content_safe(full_text) and len(full_text) > 20:
-                                stats["content_samples"].append(clean_pii(full_text[:300])) # Limit per note length
+                                stats["content_samples"].append(clean_pii(full_text[:300]))
 
+                        files_processed_count += 1
+
+                except json.JSONDecodeError as jde:
+                    errors_count += 1
+                    logger.error(f"JSON Decode Error in file {file}: {jde}")
                 except Exception as e:
-                    print(f"Skipped file: {e}")
+                    errors_count += 1
+                    logger.error(f"Error processing file {file}", exc_info=True)
 
-    if stats["count"] == 0: return None
+    logger.info(f"Analysis Complete. Processed: {files_processed_count}, Errors: {errors_count}, Total Count: {stats['count']}")
+
+    if stats["count"] == 0:
+        logger.warning("No notes found for the target year.")
+        return None
 
     # Streak Calculation
-    dates = sorted(list(stats["dates_active"]))
-    longest_streak = 0
-    current_streak = 0
-    for i in range(len(dates)):
-        if i == 0: 
-            current_streak = 1
-        else:
-            delta = dates[i] - dates[i-1]
-            if delta.days == 1:
-                current_streak += 1
-            elif delta.days > 1:
-                longest_streak = max(longest_streak, current_streak)
+    try:
+        dates = sorted(list(stats["dates_active"]))
+        longest_streak = 0
+        current_streak = 0
+        for i in range(len(dates)):
+            if i == 0: 
                 current_streak = 1
-    stats["streak"] = max(longest_streak, current_streak)
+            else:
+                delta = dates[i] - dates[i-1]
+                if delta.days == 1:
+                    current_streak += 1
+                elif delta.days > 1:
+                    longest_streak = max(longest_streak, current_streak)
+                    current_streak = 1
+        stats["streak"] = max(longest_streak, current_streak)
+    except Exception as e:
+        logger.error("Error determining streak", exc_info=True)
+        stats["streak"] = 0
 
     stats["book_equivalent"] = round(stats["total_chars"] / 30000, 1)
     stats["top_words"] = stats["common_words"].most_common(25)
     stats["top_tags"] = stats["tags"].most_common(8)
     stats["top_topics"] = stats["topics"].most_common(3)
-    stats["top_days"] = stats["days"].most_common(1)
+    
+    # Handle empty days/topics edge case
+    if stats["days"]:
+        stats["top_days"] = stats["days"].most_common(1)
+    else:
+        stats["top_days"] = [("N/A", 0)]
+
+    if not stats["top_topics"]:
+        stats["top_topics"] = [("Miscellaneous", 1)]
     
     total_aura = sum(stats["aura"].values()) + 1
     stats["aura_norm"] = {k: int((v/total_aura)*100) for k,v in stats["aura"].items()}
 
     # --- GEMINI INTEGRATION ---
     if api_key:
+        logger.info("Initiating Gemini API Call...")
         try:
             genai.configure(api_key=api_key)
             model = genai.GenerativeModel('gemini-3-flash-preview')
             
             prompt = ""
             
-            # Scenario A: Deep Analysis (Content Shared)
+            # Scenario A: Deep Analysis
             if share_content and stats["content_samples"]:
-                # Limit total payload to avoid token limits (approx 15 notes)
+                logger.info(f"Using Deep Analysis with {len(stats['content_samples'])} sampled notes.")
                 sample_notes = random.sample(stats["content_samples"], min(15, len(stats["content_samples"])))
                 notes_text = "\n---\n".join(sample_notes)
                 delimiter_key = os.urandom(16).hex()
@@ -246,7 +285,6 @@ def analyze_year(extract_path, api_key=None, share_content=False):
                 And these stats:
                 - Total Notes: {stats['count']}
                 - Top Tags: {', '.join([t[0] for t in stats['top_tags']])}
-                - Most active time: {stats['top_days'][0][0]}s
                 
                 Based on this, create a "Spotify Wrapped" style personality profile.
                 1. Assign a creative "Archetype Name" (e.g., The Midnight Poet, The Chaos Coordinator).
@@ -256,8 +294,9 @@ def analyze_year(extract_path, api_key=None, share_content=False):
                 ARCHETYPE: [Name] | DESCRIPTION: [Text]
                 """
             
-            # Scenario B: Shallow Analysis (Stats Only)
+            # Scenario B: Shallow Analysis
             else:
+                logger.info("Using Shallow Analysis (Stats only).")
                 prompt = f"""
                 Act as a Gen-Z data analyst. Based on these note-taking stats, assign a user archetype.
                 - Total Notes: {stats['count']}
@@ -274,6 +313,11 @@ def analyze_year(extract_path, api_key=None, share_content=False):
                 """
             
             response = model.generate_content(prompt)
+            
+            # Log usage metadata if available (useful for debugging quota)
+            if hasattr(response, 'usage_metadata'):
+                logger.info(f"Gemini Usage: {response.usage_metadata}")
+
             text_resp = response.text.strip()
             
             if "ARCHETYPE:" in text_resp:
@@ -284,42 +328,64 @@ def analyze_year(extract_path, api_key=None, share_content=False):
                 }
             else:
                 stats["ai_summary"]["description"] = text_resp
+            
+            logger.info("Gemini Analysis Successful.")
 
         except Exception as e:
-            print(f"Gemini Error: {e}")
+            # Capture full traceback for API errors
+            logger.error("Gemini API Error", exc_info=True)
             stats["ai_summary"]["description"] = "AI was too stunned to speak (Error or Quota exceeded)."
+    else:
+        logger.info("No API Key provided, skipping Gemini.")
 
     return stats
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == 'POST':
-        if 'file' not in request.files: return redirect(request.url)
+        if 'file' not in request.files:
+            logger.warning("POST request received but no file part found.")
+            return redirect(request.url)
+        
         file = request.files['file']
         api_key = request.form.get('api_key', '').strip()
-        share_content = request.form.get('share_content') == 'on' # Checkbox check
+        share_content = request.form.get('share_content') == 'on'
         
         if file and file.filename.endswith('.zip'):
+            logger.info(f"Processing upload: {file.filename}")
             temp_dir = tempfile.mkdtemp()
             try:
                 zip_path = os.path.join(temp_dir, secure_filename(file.filename))
                 file.save(zip_path)
-                with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-                    zip_ref.extractall(temp_dir)
                 
+                # Zip Extraction Logging
+                try:
+                    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                        zip_ref.extractall(temp_dir)
+                    logger.info("Zip extracted successfully.")
+                except zipfile.BadZipFile:
+                    logger.error("Uploaded file was not a valid ZIP.")
+                    return render_template('index.html', error="The uploaded file is corrupt or not a valid ZIP.")
+
                 stats = analyze_year(temp_dir, api_key if api_key else None, share_content)
                 
                 if not stats:
-                    return render_template('index.html', error="No notes found for this year.")
+                    return render_template('index.html', error="No notes found for this year (or empty ZIP).")
                 
                 return render_template('wrapped.html', stats=stats, color_map=COLOR_MAP)
+            
             except Exception as e:
-                print(e)
-                return render_template('index.html', error="Error processing file.")
+                logger.critical("Critical error during file processing pipeline", exc_info=True)
+                return render_template('index.html', error="An internal error occurred while processing your file.")
             finally:
                 shutil.rmtree(temp_dir)
+                logger.info("Temporary directory cleaned up.")
+                
+        else:
+            logger.warning(f"Invalid file type uploaded: {file.filename}")
+
     return render_template('index.html')
 
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=True)
+    # Debug mode is explicitly enabled for development
+    app.run(debug=True)
