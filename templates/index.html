@@ -4,52 +4,76 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Keep Wrapped</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700&display=swap" rel="stylesheet">
     <style>
-        body { background: #0d0d0d; color: #fff; font-family: sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
-        .container { max-width: 500px; width: 90%; padding: 40px; background: #1a1a1a; border-radius: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
-        h1 { background: linear-gradient(90deg, #b9fbc0, #f37335); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-align: center; font-size: 2.5rem; margin-bottom: 5px; }
-        .sub { text-align: center; color: #888; margin-bottom: 30px; }
+        body { background: #050505; color: #fff; font-family: 'Outfit', sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
+        .container { max-width: 520px; width: 90%; padding: 40px; background: #111; border-radius: 24px; border: 1px solid #222; box-shadow: 0 20px 50px rgba(0,0,0,0.8); }
+        h1 { background: linear-gradient(to right, #b9fbc0, #f37335); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-align: center; font-size: 2.8rem; margin: 0 0 10px 0; letter-spacing: -1px; }
+        .sub { text-align: center; color: #777; margin-bottom: 30px; }
         
-        details { background: #222; padding: 15px; border-radius: 10px; margin-bottom: 20px; cursor: pointer; }
-        summary { font-weight: bold; color: #ccc; }
-        details p { color: #888; font-size: 0.9rem; line-height: 1.5; margin-top: 10px; }
+        details { background: #1a1a1a; padding: 15px; border-radius: 12px; margin-bottom: 25px; cursor: pointer; border: 1px solid #333; transition: 0.2s; }
+        details:hover { border-color: #555; }
+        summary { font-weight: 600; color: #ccc; outline: none; }
+        details p { color: #888; font-size: 0.9rem; line-height: 1.6; margin-top: 10px; }
         
-        input[type="text"] { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #333; background: #111; color: white; margin-bottom: 20px; box-sizing: border-box; }
+        .input-group { margin-bottom: 20px; text-align: left; }
+        label { font-size: 0.85rem; color: #aaa; display: block; margin-bottom: 8px; font-weight: 500; }
+        input[type="text"] { width: 100%; padding: 14px; border-radius: 10px; border: 1px solid #333; background: #0a0a0a; color: white; box-sizing: border-box; font-family: inherit; transition: 0.2s; }
+        input[type="text"]:focus { border-color: #f37335; outline: none; }
         
-        .file-upload { display: block; background: #333; padding: 20px; text-align: center; border-radius: 10px; border: 2px dashed #555; transition: 0.3s; cursor: pointer; }
+        .checkbox-group { display: flex; align-items: flex-start; gap: 10px; background: rgba(243, 115, 53, 0.1); padding: 15px; border-radius: 10px; border: 1px solid rgba(243, 115, 53, 0.2); }
+        .checkbox-group input { margin-top: 4px; }
+        .checkbox-group p { margin: 0; font-size: 0.85rem; color: #ddd; line-height: 1.4; }
+        .checkbox-group small { display: block; color: #888; margin-top: 5px; font-size: 0.75rem; }
+
+        .file-upload { display: block; margin-top: 20px; background: #1a1a1a; padding: 30px; text-align: center; border-radius: 12px; border: 2px dashed #444; transition: 0.3s; cursor: pointer; }
         .file-upload:hover { border-color: #f37335; background: #222; }
         input[type="file"] { display: none; }
         
-        button { width: 100%; padding: 15px; background: #f37335; color: white; border: none; border-radius: 50px; font-weight: bold; font-size: 1.1rem; cursor: pointer; margin-top: 20px; }
-        button:hover { background: #e06020; }
-        .note { font-size: 0.8rem; color: #555; text-align: center; margin-top: 15px; }
+        button { width: 100%; padding: 16px; background: linear-gradient(90deg, #f37335, #fd1d1d); color: white; border: none; border-radius: 50px; font-weight: 700; font-size: 1.1rem; cursor: pointer; margin-top: 25px; transition: transform 0.2s; }
+        button:hover { transform: scale(1.02); }
+        .error { color: #ff4b4b; text-align: center; margin-top: 15px; font-size: 0.9rem; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Keep Wrapped</h1>
-        <p class="sub">Your digital brain, analyzed.</p>
+        <p class="sub">Discover the vibe of your digital brain.</p>
         
         <details>
-            <summary>How to get your data (Tutorial)</summary>
+            <summary>How to export your data</summary>
             <p>1. Go to <a href="https://takeout.google.com" target="_blank" style="color:#f37335;">Google Takeout</a>.</p>
-            <p>2. Click "Deselect All", then scroll down and check only <b>Keep</b>.</p>
-            <p>3. Click "Next Step", select "Send download link via email", and click "Create export".</p>
-            <p>4. Download the ZIP file and upload it below.</p>
+            <p>2. Click "Deselect All", then scroll down and check ONLY <b>Keep</b>.</p>
+            <p>3. Select "Send download link via email" and create export.</p>
+            <p>4. Download the ZIP file and upload it here.</p>
         </details>
 
         <form method="POST" enctype="multipart/form-data">
-            <label style="font-size: 0.9rem; color: #aaa;">Gemini API Key (Optional for AI Summary)</label>
-            <input type="text" name="api_key" placeholder="Paste key from Google AI Studio...">
+            
+            <div class="input-group">
+                <label>Gemini API Key (Optional)</label>
+                <input type="text" name="api_key" placeholder="Paste key from Google AI Studio for Persona generation">
+            </div>
+
+            <div class="checkbox-group">
+                <input type="checkbox" name="share_content" id="share_content">
+                <div>
+                    <p><b>Enable Deep Analysis</b></p>
+                    <small>If checked, a random sample of ~15 notes will be sent to Gemini for accurate personality profiling. Notes with keywords like "password" or regex-matched emails/phones are automatically excluded.</small>
+                </div>
+            </div>
             
             <label class="file-upload">
-                <span>📂 Click to select Takeout.zip</span>
-                <input type="file" name="file" accept=".zip" required>
+                <span style="font-size: 1.2rem;">📂 Select Takeout.zip</span>
+                <input type="file" name="file" accept=".zip" required onchange="this.parentElement.style.borderColor='#b9fbc0'">
             </label>
 
             <button type="submit">Generate Wrapped</button>
         </form>
-        <p class="note">Your data is processed in memory and deleted immediately.</p>
+
+        {% if error %}
+            <div class="error">{{ error }}</div>
+        {% endif %}
     </div>
 </body>
 </html>
