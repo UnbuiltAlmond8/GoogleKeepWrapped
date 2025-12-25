@@ -5,62 +5,51 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Keep Wrapped</title>
     <style>
-        body {
-            background-color: #0d0d0d;
-            color: #e0e0e0;
-            font-family: 'Helvetica Neue', sans-serif;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-        }
-        .card {
-            background: #1a1a1a;
-            padding: 50px;
-            border-radius: 24px;
-            text-align: center;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            max-width: 450px;
-        }
-        h1 {
-            background: linear-gradient(90deg, #ff8a00, #e52e71);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            font-size: 2.5rem;
-            margin-bottom: 10px;
-        }
-        p { color: #888; line-height: 1.6; margin-bottom: 30px; }
-        .upload-btn {
-            background: white;
-            color: black;
-            padding: 15px 32px;
-            border-radius: 50px;
-            font-weight: bold;
-            text-decoration: none;
-            cursor: pointer;
-            transition: 0.3s;
-            display: inline-block;
-        }
-        .upload-btn:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(255,255,255,0.2); }
+        body { background: #0d0d0d; color: #fff; font-family: sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
+        .container { max-width: 500px; width: 90%; padding: 40px; background: #1a1a1a; border-radius: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
+        h1 { background: linear-gradient(90deg, #b9fbc0, #f37335); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-align: center; font-size: 2.5rem; margin-bottom: 5px; }
+        .sub { text-align: center; color: #888; margin-bottom: 30px; }
+        
+        details { background: #222; padding: 15px; border-radius: 10px; margin-bottom: 20px; cursor: pointer; }
+        summary { font-weight: bold; color: #ccc; }
+        details p { color: #888; font-size: 0.9rem; line-height: 1.5; margin-top: 10px; }
+        
+        input[type="text"] { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #333; background: #111; color: white; margin-bottom: 20px; box-sizing: border-box; }
+        
+        .file-upload { display: block; background: #333; padding: 20px; text-align: center; border-radius: 10px; border: 2px dashed #555; transition: 0.3s; cursor: pointer; }
+        .file-upload:hover { border-color: #f37335; background: #222; }
         input[type="file"] { display: none; }
-        .error { color: #ff4b4b; margin-top: 15px; }
+        
+        button { width: 100%; padding: 15px; background: #f37335; color: white; border: none; border-radius: 50px; font-weight: bold; font-size: 1.1rem; cursor: pointer; margin-top: 20px; }
+        button:hover { background: #e06020; }
+        .note { font-size: 0.8rem; color: #555; text-align: center; margin-top: 15px; }
     </style>
 </head>
 <body>
-    <div class="card">
+    <div class="container">
         <h1>Keep Wrapped</h1>
-        <p>Your year in notes. Upload your Google Keep JSON <b>Takeout.zip</b> file to generate your summary.</p>
+        <p class="sub">Your digital brain, analyzed.</p>
+        
+        <details>
+            <summary>How to get your data (Tutorial)</summary>
+            <p>1. Go to <a href="https://takeout.google.com" target="_blank" style="color:#f37335;">Google Takeout</a>.</p>
+            <p>2. Click "Deselect All", then scroll down and check only <b>Keep</b>.</p>
+            <p>3. Click "Next Step", select "Send download link via email", and click "Create export".</p>
+            <p>4. Download the ZIP file and upload it below.</p>
+        </details>
+
         <form method="POST" enctype="multipart/form-data">
-            <label class="upload-btn">
-                Select ZIP File
-                <input type="file" name="file" accept=".zip" onchange="this.form.submit()">
+            <label style="font-size: 0.9rem; color: #aaa;">Gemini API Key (Optional for AI Summary)</label>
+            <input type="text" name="api_key" placeholder="Paste key from Google AI Studio...">
+            
+            <label class="file-upload">
+                <span>📂 Click to select Takeout.zip</span>
+                <input type="file" name="file" accept=".zip" required>
             </label>
+
+            <button type="submit">Generate Wrapped</button>
         </form>
-        {% if error %}
-            <div class="error">{{ error }}</div>
-        {% endif %}
+        <p class="note">Your data is processed in memory and deleted immediately.</p>
     </div>
 </body>
 </html>
