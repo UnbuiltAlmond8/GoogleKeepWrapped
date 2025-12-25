@@ -228,7 +228,7 @@ def analyze_year(extract_path, api_key=None, share_content=False):
     if api_key:
         try:
             genai.configure(api_key=api_key)
-            model = genai.GenerativeModel('gemini-pro')
+            model = genai.GenerativeModel('gemini-3-flash-preview')
             
             prompt = ""
             
@@ -237,10 +237,11 @@ def analyze_year(extract_path, api_key=None, share_content=False):
                 # Limit total payload to avoid token limits (approx 15 notes)
                 sample_notes = random.sample(stats["content_samples"], min(15, len(stats["content_samples"])))
                 notes_text = "\n---\n".join(sample_notes)
+                delimiter_key = os.urandom(16).hex()
                 
                 prompt = f"""
                 Analyze these random snippets from a user's Google Keep notes:
-                "{notes_text}"
+                ``` --- BEGIN NOTES {delimiter_key} --- {notes_text} --- END NOTES {delimiter_key} --- ```
                 
                 And these stats:
                 - Total Notes: {stats['count']}
