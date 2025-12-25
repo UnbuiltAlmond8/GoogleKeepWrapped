@@ -26,7 +26,7 @@
         .day-cell { width: 10px; height: 10px; border-radius: 2px; background: #27272a; }
         .day-cell.l1 { background: #0e4429; } .day-cell.l2 { background: #006d32; } .day-cell.l3 { background: #26a641; } .day-cell.l4 { background: #39d353; }
 
-        /* Lists Section */
+        /* Lists */
         .list-stat { display: flex; justify-content: space-between; border-bottom: 1px solid #333; padding: 10px 0; font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; }
         
         /* Word Cloud */
@@ -38,10 +38,22 @@
         /* Note Preview */
         .note-paper { background: #fff; color: #000; padding: 20px; width: 80%; max-width: 500px; border-radius: 5px; font-family: 'Courier New', monospace; transform: rotate(-2deg); box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: left; max-height: 300px; overflow-y: auto; }
 
+        /* DREAMS / NIGHTMARES */
+        .dream-container { width: 100%; max-width: 700px; margin-top: 30px; text-align: left; }
+        .dream-card { margin-bottom: 15px; padding: 20px; border-radius: 15px; position: relative; }
+        
+        .dream-type-Dream { background: linear-gradient(135deg, #2a0845, #6441a5); border: 1px solid #7c4dff; box-shadow: 0 0 15px rgba(124, 77, 255, 0.3); }
+        .dream-type-Nightmare { background: linear-gradient(135deg, #2b0404, #4a0000); border: 1px solid #ff5252; box-shadow: 0 0 15px rgba(255, 82, 82, 0.3); }
+        
+        .dream-badge { position: absolute; top: -10px; right: 20px; padding: 5px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: bold; text-transform: uppercase; }
+        .dream-type-Dream .dream-badge { background: #7c4dff; color: white; }
+        .dream-type-Nightmare .dream-badge { background: #ff5252; color: white; }
+
         /* Backgrounds */
         .bg-1 { background: radial-gradient(circle at center, #18181b 0%, #000 100%); }
         .bg-2 { background: #000; }
         .bg-3 { background: linear-gradient(to bottom, #111, #000); }
+        .bg-dream { background: linear-gradient(to bottom, #12100E, #2B32B2); }
     </style>
 </head>
 <body>
@@ -74,7 +86,6 @@
         <h2>Consistency</h2>
         <h1>{{ stats.streak }} Day Streak 🔥</h1>
         
-        <!-- CSS Grid Heatmap -->
         <div class="heatmap-container" id="heatmap"></div>
         
         <div class="grid" style="margin-top: 40px;">
@@ -97,7 +108,28 @@
         </div>
     </section>
 
-    <!-- 5. WRITING STYLE -->
+    <!-- 5. DREAMS & NIGHTMARES (Conditional) -->
+    {% if stats.dream_log %}
+    <section class="slide bg-dream">
+        <h1>The Subconscious</h1>
+        <h2 style="color: #a18cd1;">Night Shift</h2>
+        
+        <div class="dream-container">
+            {% for entry in stats.dream_log[:3] %}
+                <div class="dream-card dream-type-{{ entry.type }}">
+                    <span class="dream-badge">{{ entry.type }}</span>
+                    <div style="font-size: 0.8rem; opacity: 0.7; margin-bottom: 10px;">{{ entry.date }}</div>
+                    <div style="font-style: italic; line-height: 1.4;">"{{ entry.snippet }}"</div>
+                </div>
+            {% endfor %}
+        </div>
+        {% if stats.dream_log|length > 3 %}
+        <p style="margin-top: 20px; opacity: 0.5;">...and {{ stats.dream_log|length - 3 }} more.</p>
+        {% endif %}
+    </section>
+    {% endif %}
+
+    <!-- 6. WRITING STYLE -->
     <section class="slide bg-1">
         <h2>Voice & Tone</h2>
         <div style="margin: 20px 0;">
@@ -116,7 +148,7 @@
         </div>
     </section>
 
-    <!-- 6. ORGANIZATION -->
+    <!-- 7. ORGANIZATION -->
     <section class="slide bg-2">
         <h2>The System</h2>
         <h1>{{ stats.label_rate }}% Labeled</h1>
@@ -131,7 +163,7 @@
         </div>
     </section>
 
-    <!-- 7. AI SUMMARY -->
+    <!-- 8. AI SUMMARY -->
     <section class="slide bg-3">
         <h2>The Verdict</h2>
         <div style="background: linear-gradient(135deg, #222, #333); padding: 40px; border-radius: 30px; max-width: 600px; border: 1px solid #444;">
@@ -140,7 +172,7 @@
         </div>
     </section>
 
-    <!-- 8. LONGEST NOTE -->
+    <!-- 9. LONGEST NOTE -->
     <section class="slide bg-1">
         <h2>Magnum Opus</h2>
         <div class="note-paper">
@@ -154,22 +186,13 @@
 
 <script>
     // 1. Generate Heatmap
-    const heatmapData = {{ stats.heatmap | tojson }};
     const heatmapContainer = document.getElementById('heatmap');
-    
-    // Generate dummy dates for the year grid (approx 53 weeks x 7 days)
-    // This is a simplified visual representation
+    // Simplified visual logic for heatmap
     for(let i=0; i<365; i++) {
         let div = document.createElement('div');
         div.className = 'day-cell';
-        
-        // Simple randomization for demo if sparse, real logic would map specific dates
-        // Ideally we map i to specific date string, here we just show activity density roughly
-        // To do it perfectly requires moment.js or complex date math in JS
-        // Let's just fill randomly based on total count to look cool for now
         if(Math.random() > 0.8) div.classList.add('l1');
         if(Math.random() > 0.95) div.classList.add('l3');
-        
         heatmapContainer.appendChild(div);
     }
 
