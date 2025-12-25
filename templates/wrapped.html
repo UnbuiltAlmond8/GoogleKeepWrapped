@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Keep Wrapped {{ stats.year }}</title>
+    <title>{{ stats.year }} Wrapped</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;800&display=swap" rel="stylesheet">
     <style>
-        :root { --bg: #000; --card: rgba(255,255,255,0.08); }
+        :root { --bg: #000; --card: rgba(255,255,255,0.08); --accent: #f37335; }
         body { margin: 0; background: var(--bg); color: white; font-family: 'Outfit', sans-serif; overflow: hidden; }
         
         .scroll-container { height: 100vh; overflow-y: scroll; scroll-snap-type: y mandatory; scroll-behavior: smooth; }
@@ -17,25 +17,38 @@
         /* Slide Backgrounds */
         .bg-gradient { background: radial-gradient(circle at top right, #2a2a2a, #000); }
         .bg-dream { background: linear-gradient(to bottom, #0f0c29, #302b63, #24243e); }
-        .bg-stats { background: #111; }
+        .bg-stats { background: #0a0a0a; }
+        .bg-outro { background: linear-gradient(45deg, #111, #222); }
         
-        h1 { font-size: 3.5rem; margin: 0; line-height: 1.1; text-align: center; }
-        h2 { color: #888; font-weight: 300; margin-bottom: 20px; font-size: 1.5rem; text-align: center; }
+        h1 { font-size: 4rem; margin: 0; line-height: 1; text-align: center; letter-spacing: -2px; }
+        h2 { color: #888; font-weight: 300; margin-bottom: 30px; font-size: 1.5rem; text-align: center; }
         
-        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; width: 100%; max-width: 600px; margin-top: 30px; }
-        .card { background: var(--card); padding: 25px; border-radius: 20px; text-align: center; backdrop-filter: blur(10px); }
-        .card b { font-size: 2.5rem; display: block; color: #b9fbc0; }
+        /* Stats Grid */
+        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; width: 100%; max-width: 700px; margin-top: 30px; }
+        .card { background: var(--card); padding: 30px; border-radius: 24px; text-align: center; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.05); transition: transform 0.3s; }
+        .card:hover { transform: translateY(-5px); background: rgba(255,255,255,0.12); }
+        .card b { font-size: 3rem; display: block; color: #b9fbc0; line-height: 1; margin-bottom: 10px; }
+        .card span { font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; color: #ccc; }
         
-        .ai-box { max-width: 600px; background: linear-gradient(135deg, #222, #333); padding: 30px; border-radius: 20px; border: 1px solid #444; margin-top: 30px; box-shadow: 0 0 30px rgba(255,255,255,0.05); }
-        .ai-type { color: #f37335; font-weight: 800; text-transform: uppercase; letter-spacing: 2px; font-size: 1.2rem; }
-        
+        /* AI Box */
+        .ai-box { max-width: 600px; width: 90%; background: linear-gradient(135deg, #1a1a1a, #2a2a2a); padding: 40px; border-radius: 30px; border: 1px solid #333; margin-top: 30px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); text-align: center; }
+        .ai-type { color: var(--accent); font-weight: 800; text-transform: uppercase; letter-spacing: 3px; font-size: 1.5rem; margin-bottom: 15px; display: block; }
+        .ai-desc { font-size: 1.2rem; line-height: 1.6; color: #eee; }
+
+        /* Clouds */
         .word-cloud { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; max-width: 800px; margin-top: 30px; }
-        .word-tag { background: #333; padding: 8px 16px; border-radius: 20px; color: #ddd; }
+        .word-tag { background: #222; padding: 10px 20px; border-radius: 50px; color: #ddd; border: 1px solid #333; }
         
-        .note-preview { max-height: 200px; overflow-y: auto; text-align: left; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px; font-family: monospace; font-size: 0.9rem; line-height: 1.4; margin-top: 15px; white-space: pre-wrap; }
+        /* Longest Note */
+        .note-container { width: 90%; max-width: 600px; background: #1a1a1a; border-radius: 20px; padding: 5px; margin-top: 20px; }
+        .note-preview { max-height: 300px; overflow-y: auto; text-align: left; padding: 25px; font-family: 'Courier New', monospace; font-size: 0.95rem; line-height: 1.6; white-space: pre-wrap; color: #ccc; }
         
+        /* Dreams */
         .dream-list { text-align: left; width: 100%; max-width: 600px; }
-        .dream-item { border-left: 3px solid #b9fbc0; padding-left: 15px; margin-bottom: 20px; color: #ccc; }
+        .dream-item { border-left: 3px solid #a18cd1; padding-left: 20px; margin-bottom: 25px; color: #ccc; background: rgba(255,255,255,0.03); padding: 15px; border-radius: 0 10px 10px 0; }
+        
+        .nav-hint { position: absolute; bottom: 30px; opacity: 0.5; font-size: 0.9rem; animation: bounce 2s infinite; }
+        @keyframes bounce { 0%, 100% {transform:translateY(0);} 50% {transform:translateY(-10px);} }
     </style>
 </head>
 <body>
@@ -44,41 +57,47 @@
 
     <!-- 1. Intro -->
     <section class="slide bg-gradient">
-        <h2>{{ stats.year }} Wrapped</h2>
-        <h1>Your Digital Brain<br>Unpacked</h1>
-        <div style="margin-top: 40px;">Scroll to unlock ↓</div>
+        <h2>Google Keep</h2>
+        <h1>{{ stats.year }} Wrapped</h1>
+        <div style="margin-top: 20px; font-size: 1.2rem; color: #888;">{{ stats.count }} Notes Analyzed</div>
+        <div class="nav-hint">Scroll ↓</div>
     </section>
 
     <!-- 2. AI Persona -->
     <section class="slide bg-stats">
-        <h2>According to AI, you are...</h2>
+        <h2>Your Note Taking Persona</h2>
         <div class="ai-box">
-            <div id="ai-content">{{ stats.ai_summary }}</div>
+            <span class="ai-type">{{ stats.ai_summary.archetype }}</span>
+            <div class="ai-desc">{{ stats.ai_summary.description }}</div>
         </div>
-        <script>
-            // Simple parsing to colorize the Archetype if present
-            const aiText = `{{ stats.ai_summary }}`;
-            const parts = aiText.split('|');
-            if(parts.length > 1) {
-                document.getElementById('ai-content').innerHTML = `<div class="ai-type">${parts[0].replace('ARCHETYPE:', '').trim()}</div><p>${parts[1].replace('DESCRIPTION:', '').trim()}</p>`;
-            }
-        </script>
     </section>
 
     <!-- 3. Fascinating Metrics -->
     <section class="slide bg-gradient">
-        <h1>By The Numbers</h1>
+        <h1>The Deep Dive</h1>
         <div class="stat-grid">
-            <div class="card"><b>{{ stats.count }}</b>Notes</div>
-            <div class="card"><b>{{ stats.streak }}</b>Day Streak 🔥</div>
-            <div class="card"><b>{{ stats.book_equivalent }}</b>Novellas Written 📚</div>
-            <div class="card"><b>{{ stats.top_days[0][0] }}</b>Peak Creative Day 📅</div>
+            <div class="card">
+                <b>{{ stats.streak }}</b>
+                <span>Day Streak 🔥</span>
+            </div>
+            <div class="card">
+                <b>{{ stats.book_equivalent }}</b>
+                <span>Novellas Typed 📚</span>
+            </div>
+            <div class="card">
+                <b>{{ stats.top_days[0][0] }}</b>
+                <span>Peak Day 📅</span>
+            </div>
+            <div class="card">
+                <b>{{ stats.top_topics[0][0] }}</b>
+                <span>Main Topic 🧠</span>
+            </div>
         </div>
     </section>
 
-    <!-- 4. Top Words & Topics -->
+    <!-- 4. Vocabulary & Tags -->
     <section class="slide bg-stats">
-        <h2>Your Vocabulary</h2>
+        <h2>Your Language</h2>
         <div class="word-cloud">
             {% for word, count in stats.top_words %}
                 <span class="word-tag" style="font-size: {{ 0.8 + (count/stats.top_words[0][1]) }}rem; opacity: {{ 0.5 + (count/stats.top_words[0][1])/2 }}">
@@ -87,36 +106,34 @@
             {% endfor %}
         </div>
         
-        <h2 style="margin-top: 50px;">Main Topics</h2>
-        <div class="stat-grid" style="grid-template-columns: repeat(3, 1fr);">
-            {% for topic, count in stats.top_topics %}
-                <div class="card" style="padding: 15px;">
-                    <div style="font-size: 1.2rem; color: #f37335;">{{ topic }}</div>
-                </div>
+        <h2 style="margin-top: 50px;">Obsessions (#Tags)</h2>
+        <div class="word-cloud">
+            {% for tag, count in stats.top_tags %}
+                <span class="word-tag" style="border-color: #f37335; color: white;">#{{ tag }}</span>
             {% endfor %}
         </div>
     </section>
 
     <!-- 5. Longest Note -->
     <section class="slide bg-gradient">
-        <h2>The "Magnum Opus"</h2>
+        <h2>Your Magnum Opus</h2>
         <h1>Longest Note</h1>
-        <p>Written on {{ stats.longest_note.date }} • {{ stats.longest_note.len }} characters</p>
-        <div class="card" style="width: 80%; max-width: 600px;">
-            <div class="note-preview">"{{ stats.longest_note.text }}"</div>
+        <p style="color:#777">Written on {{ stats.longest_note.date }} • {{ stats.longest_note.len }} characters</p>
+        <div class="note-container">
+            <div class="note-preview">{{ stats.longest_note.text }}</div>
         </div>
     </section>
 
     <!-- 6. Dreams (Conditional) -->
     {% if stats.dreams %}
     <section class="slide bg-dream">
-        <h1 style="color: #a18cd1; text-shadow: 0 0 10px #a18cd1;">Night Shift</h1>
-        <h2>You logged {{ stats.dreams|length }} dreams</h2>
+        <h1 style="color: #a18cd1; text-shadow: 0 0 20px rgba(161, 140, 209, 0.5);">Night Shift</h1>
+        <h2 style="color: #ccc;">You recorded {{ stats.dreams|length }} dreams</h2>
         <div class="dream-list">
             {% for dream in stats.dreams[:3] %}
                 <div class="dream-item">
-                    <small style="color:#777">{{ dream.date }}</small><br>
-                    {{ dream.snippet }}
+                    <div style="font-size: 0.8rem; color: #a18cd1; margin-bottom: 5px; font-weight: bold;">{{ dream.date }}</div>
+                    "{{ dream.snippet }}"
                 </div>
             {% endfor %}
         </div>
@@ -125,10 +142,23 @@
 
     <!-- 7. Aura Radar -->
     <section class="slide bg-stats">
-        <h2>Your Note Aura</h2>
-        <div style="width: 100%; max-width: 500px; height: 400px;">
+        <h2>Your Brain Aura</h2>
+        <div style="width: 100%; max-width: 500px; height: 400px; position: relative;">
             <canvas id="auraChart"></canvas>
         </div>
+    </section>
+
+    <!-- 8. Outro -->
+    <section class="slide bg-outro">
+        <h1>See you in {{ stats.year + 1 }}</h1>
+        <br>
+        <div class="stat-grid" style="grid-template-columns: 1fr;">
+             <div class="card" style="background: transparent; border: none;">
+                <b>{{ stats.total_chars // 1000 }}k</b>
+                <span>Total Characters</span>
+             </div>
+        </div>
+        <a href="/" style="color: #f37335; text-decoration: none; font-size: 1.2rem; margin-top: 40px; border-bottom: 2px solid;">Start Over</a>
     </section>
 
 </div>
@@ -145,6 +175,7 @@
     // Radar Chart
     Chart.defaults.color = '#888';
     Chart.defaults.font.family = 'Outfit';
+    
     new Chart(document.getElementById('auraChart'), {
         type: 'radar',
         data: {
@@ -158,11 +189,20 @@
                 ],
                 backgroundColor: 'rgba(243, 115, 53, 0.4)',
                 borderColor: '#f37335',
-                pointBackgroundColor: '#fff'
+                pointBackgroundColor: '#fff',
+                borderWidth: 3
             }]
         },
         options: {
-            scales: { r: { grid: { color: '#333' }, ticks: { display: false }, pointLabels: { font: { size: 14, weight: 'bold' }, color: 'white' } } },
+            maintainAspectRatio: false,
+            scales: {
+                r: {
+                    angleLines: { color: '#333' },
+                    grid: { color: '#333' },
+                    ticks: { display: false },
+                    pointLabels: { font: { size: 14, weight: 'bold' }, color: 'white' }
+                }
+            },
             plugins: { legend: { display: false } }
         }
     });
