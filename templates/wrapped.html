@@ -29,31 +29,26 @@
         /* Lists */
         .list-stat { display: flex; justify-content: space-between; border-bottom: 1px solid #333; padding: 10px 0; font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; }
         
-        /* Word Cloud */
+        /* Clouds */
         .pill-cloud { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; max-width: 700px; }
         .pill { background: #27272a; padding: 8px 16px; border-radius: 50px; font-size: 0.9rem; color: #a1a1aa; border: 1px solid #3f3f46; }
-        
         .emoji-big { font-size: 3rem; margin: 0 10px; }
         
         /* Note Preview */
         .note-paper { background: #fff; color: #000; padding: 20px; width: 80%; max-width: 500px; border-radius: 5px; font-family: 'Courier New', monospace; transform: rotate(-2deg); box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: left; max-height: 300px; overflow-y: auto; }
 
-        /* DREAMS / NIGHTMARES */
-        .dream-container { width: 100%; max-width: 700px; margin-top: 30px; text-align: left; }
-        .dream-card { margin-bottom: 15px; padding: 20px; border-radius: 15px; position: relative; }
-        
-        .dream-type-Dream { background: linear-gradient(135deg, #2a0845, #6441a5); border: 1px solid #7c4dff; box-shadow: 0 0 15px rgba(124, 77, 255, 0.3); }
-        .dream-type-Nightmare { background: linear-gradient(135deg, #2b0404, #4a0000); border: 1px solid #ff5252; box-shadow: 0 0 15px rgba(255, 82, 82, 0.3); }
-        
-        .dream-badge { position: absolute; top: -10px; right: 20px; padding: 5px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: bold; text-transform: uppercase; }
-        .dream-type-Dream .dream-badge { background: #7c4dff; color: white; }
-        .dream-type-Nightmare .dream-badge { background: #ff5252; color: white; }
+        /* Dream / Nightmare Styles */
+        .dream-container { width: 100%; max-width: 600px; text-align: left; }
+        .dream-item { background: rgba(255, 255, 255, 0.1); padding: 15px; border-radius: 12px; margin-bottom: 15px; border-left: 4px solid; backdrop-filter: blur(5px); }
+        .dream-item.d { border-color: #a78bfa; }
+        .dream-item.n { border-color: #ef4444; background: rgba(0,0,0,0.3); }
 
         /* Backgrounds */
         .bg-1 { background: radial-gradient(circle at center, #18181b 0%, #000 100%); }
         .bg-2 { background: #000; }
         .bg-3 { background: linear-gradient(to bottom, #111, #000); }
-        .bg-dream { background: linear-gradient(to bottom, #12100E, #2B32B2); }
+        .bg-dream { background: linear-gradient(135deg, #1e1b4b, #312e81, #4338ca); }
+        .bg-nightmare { background: radial-gradient(circle at center, #450a0a, #000); }
     </style>
 </head>
 <body>
@@ -81,15 +76,13 @@
         </p>
     </section>
 
-    <!-- 3. ACTIVITY HEATMAP -->
+    <!-- 3. HEATMAP -->
     <section class="slide bg-3">
         <h2>Consistency</h2>
         <h1>{{ stats.streak }} Day Streak 🔥</h1>
-        
         <div class="heatmap-container" id="heatmap"></div>
-        
         <div class="grid" style="margin-top: 40px;">
-            <div class="card"><b>{{ stats.top_day[0][0] }}</b><span>Most Active Day</span></div>
+            <div class="card"><b>{{ stats.top_day[0][0] }}</b><span>Active Day</span></div>
             <div class="card"><b>{{ stats.top_hour[0][0] }}:00</b><span>Peak Hour</span></div>
         </div>
     </section>
@@ -103,43 +96,17 @@
         <h1>{{ stats.completion_rate }}% Completion</h1>
         <div style="width: 100%; max-width: 500px; margin-top: 20px;">
             <div class="list-stat"><span>Lists Created</span> <span>{{ stats.total_checklists }}</span></div>
-            <div class="list-stat"><span>Items Checked</span> <span>{{ stats.checklist_items_checked }} / {{ stats.checklist_items_total }}</span></div>
             <div class="list-stat"><span>Top Action</span> <span>{{ stats.top_verbs[0][0] }}</span></div>
         </div>
     </section>
 
-    <!-- 5. DREAMS & NIGHTMARES (Conditional) -->
-    {% if stats.dream_log %}
-    <section class="slide bg-dream">
-        <h1>The Subconscious</h1>
-        <h2 style="color: #a18cd1;">Night Shift</h2>
-        
-        <div class="dream-container">
-            {% for entry in stats.dream_log[:3] %}
-                <div class="dream-card dream-type-{{ entry.type }}">
-                    <span class="dream-badge">{{ entry.type }}</span>
-                    <div style="font-size: 0.8rem; opacity: 0.7; margin-bottom: 10px;">{{ entry.date }}</div>
-                    <div style="font-style: italic; line-height: 1.4;">"{{ entry.snippet }}"</div>
-                </div>
-            {% endfor %}
-        </div>
-        {% if stats.dream_log|length > 3 %}
-        <p style="margin-top: 20px; opacity: 0.5;">...and {{ stats.dream_log|length - 3 }} more.</p>
-        {% endif %}
-    </section>
-    {% endif %}
-
-    <!-- 6. WRITING STYLE -->
+    <!-- 5. WRITING STYLE -->
     <section class="slide bg-1">
         <h2>Voice & Tone</h2>
         <div style="margin: 20px 0;">
             {% for em, count in stats.top_emojis %}
                 <span class="emoji-big">{{ em }}</span>
             {% endfor %}
-        </div>
-        <div class="grid">
-            <div class="card"><b>{{ stats.avg_words }}</b><span>Avg Words/Note</span></div>
-            <div class="card"><b>{{ stats.questions_count }}</b><span>Questions Asked</span></div>
         </div>
         <div class="pill-cloud" style="margin-top: 30px;">
             {% for w, c in stats.top_words %}
@@ -148,27 +115,53 @@
         </div>
     </section>
 
-    <!-- 7. ORGANIZATION -->
-    <section class="slide bg-2">
-        <h2>The System</h2>
-        <h1>{{ stats.label_rate }}% Labeled</h1>
-        <div class="pill-cloud" style="margin-top: 30px;">
-            {% for l, c in stats.top_labels %}
-                <span class="pill" style="border-color: var(--accent); color: white;">#{{ l }}</span>
+    <!-- 6. DREAMS (Conditional) -->
+    {% if stats.dreams %}
+    <section class="slide bg-dream">
+        <h2 style="color: #c7d2fe;">Subconscious Log</h2>
+        <h1 style="color: #e0e7ff;">Sweet Dreams ☁️</h1>
+        <p>{{ stats.dreams|length }} recorded</p>
+        <div class="dream-container">
+            {% for d in stats.dreams[:3] %}
+                <div class="dream-item d">
+                    <small style="color: #c7d2fe; display:block; margin-bottom:5px;">{{ d.date }}</small>
+                    {{ d.snippet }}
+                </div>
             {% endfor %}
         </div>
-        <div class="grid">
-            <div class="card"><b>{{ stats.total_labels_used }}</b><span>Tags Applied</span></div>
-            <div class="card"><b>{{ stats.revisited_notes }}</b><span>Notes Revisited</span></div>
+    </section>
+    {% endif %}
+
+    <!-- 7. NIGHTMARES (Conditional) -->
+    {% if stats.nightmares %}
+    <section class="slide bg-nightmare">
+        <h2 style="color: #fca5a5;">Subconscious Log</h2>
+        <h1 style="color: #fee2e2; text-shadow: 0 0 20px #dc2626;">Nightmares 👁️</h1>
+        <p>{{ stats.nightmares|length }} recorded</p>
+        <div class="dream-container">
+            {% for n in stats.nightmares[:3] %}
+                <div class="dream-item n">
+                    <small style="color: #fca5a5; display:block; margin-bottom:5px;">{{ n.date }}</small>
+                    {{ n.snippet }}
+                </div>
+            {% endfor %}
         </div>
     </section>
+    {% endif %}
 
     <!-- 8. AI SUMMARY -->
     <section class="slide bg-3">
         <h2>The Verdict</h2>
         <div style="background: linear-gradient(135deg, #222, #333); padding: 40px; border-radius: 30px; max-width: 600px; border: 1px solid #444;">
             <h1 style="color: var(--accent); font-size: 2rem; margin-bottom: 20px;">{{ stats.ai_summary.archetype }}</h1>
-            <p style="font-size: 1.2rem; line-height: 1.6;">{{ stats.ai_summary.description }}</p>
+            <p style="font-size: 1.1rem; line-height: 1.6;">{{ stats.ai_summary.description }}</p>
+            
+            {% if stats.ai_summary.subconscious %}
+            <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #555;">
+                <h3 style="margin: 0 0 10px 0; color: #a78bfa;">Subconscious Analysis</h3>
+                <p style="font-size: 1rem; color: #d4d4d8; font-style: italic;">"{{ stats.ai_summary.subconscious }}"</p>
+            </div>
+            {% endif %}
         </div>
     </section>
 
@@ -185,9 +178,8 @@
 </div>
 
 <script>
-    // 1. Generate Heatmap
+    // Heatmap
     const heatmapContainer = document.getElementById('heatmap');
-    // Simplified visual logic for heatmap
     for(let i=0; i<365; i++) {
         let div = document.createElement('div');
         div.className = 'day-cell';
@@ -196,7 +188,7 @@
         heatmapContainer.appendChild(div);
     }
 
-    // 2. Checklist Chart
+    // Chart
     new Chart(document.getElementById('checkChart'), {
         type: 'doughnut',
         data: {
