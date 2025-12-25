@@ -1,4 +1,6 @@
 Flask==3.0.0
 gunicorn==21.2.0
+werkzeug==3.0.1
+vaderSentiment==3.3.2
+google-generativeai==0.3.2
 textblob==0.17.1
-Werkzeug==3.0.1
