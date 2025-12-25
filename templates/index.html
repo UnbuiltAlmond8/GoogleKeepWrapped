@@ -6,47 +6,61 @@
     <title>Keep Wrapped</title>
     <style>
         body {
-            background-color: #121212;
-            color: white;
+            background-color: #0d0d0d;
+            color: #e0e0e0;
             font-family: 'Helvetica Neue', sans-serif;
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
             height: 100vh;
             margin: 0;
+        }
+        .card {
+            background: #1a1a1a;
+            padding: 50px;
+            border-radius: 24px;
             text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            max-width: 450px;
         }
-        .container {
-            border: 2px dashed #F28B82;
-            padding: 40px;
-            border-radius: 20px;
-            max-width: 500px;
+        h1 {
+            background: linear-gradient(90deg, #ff8a00, #e52e71);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
         }
-        h1 { font-size: 3rem; margin-bottom: 10px; background: linear-gradient(45deg, #F28B82, #FBBC04); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        p { color: #aaa; margin-bottom: 30px; }
-        input[type="file"] { display: none; }
-        .btn {
-            background: #FBBC04;
-            color: #121212;
-            padding: 15px 30px;
+        p { color: #888; line-height: 1.6; margin-bottom: 30px; }
+        .upload-btn {
+            background: white;
+            color: black;
+            padding: 15px 32px;
             border-radius: 50px;
             font-weight: bold;
+            text-decoration: none;
             cursor: pointer;
-            transition: transform 0.2s;
-            border: none;
-            font-size: 1.2rem;
+            transition: 0.3s;
+            display: inline-block;
         }
-        .btn:hover { transform: scale(1.05); }
+        .upload-btn:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(255,255,255,0.2); }
+        input[type="file"] { display: none; }
+        .error { color: #ff4b4b; margin-top: 15px; }
     </style>
 </head>
 <body>
-    <div class="container">
+    <div class="card">
         <h1>Keep Wrapped</h1>
-        <p>Export your Google Keep data via Google Takeout as a JSON ZIP file and upload it here to see your note-taking year in review.</p>
+        <p>Your year in notes. Upload your Google Keep JSON <b>Takeout.zip</b> file to generate your summary.</p>
         <form method="POST" enctype="multipart/form-data">
-            <label for="file" class="btn">Choose ZIP File</label>
-            <input type="file" name="file" id="file" accept=".zip" onchange="this.form.submit()">
+            <label class="upload-btn">
+                Select ZIP File
+                <input type="file" name="file" accept=".zip" onchange="this.form.submit()">
+            </label>
         </form>
+        {% if error %}
+            <div class="error">{{ error }}</div>
+        {% endif %}
     </div>
 </body>
 </html>
