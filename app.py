@@ -326,7 +326,7 @@ def analyze_year(extract_path, api_key=None, share_content=False):
     if api_key:
         try:
             genai.configure(api_key=api_key)
-            model = genai.GenerativeModel('gemini-pro')
+            model = genai.GenerativeModel('gemini-3-flash-preview')
             
             prompt_context = ""
             
@@ -400,3 +400,4 @@ def index():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
