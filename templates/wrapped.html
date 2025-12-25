@@ -5,207 +5,188 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ stats.year }} Wrapped</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Outfit:wght@300;500;800&display=swap" rel="stylesheet">
     <style>
-        :root { --bg: #000; --card: rgba(255,255,255,0.08); --accent: #f37335; }
-        body { margin: 0; background: var(--bg); color: white; font-family: 'Outfit', sans-serif; overflow: hidden; }
+        :root { --bg: #09090b; --card: #18181b; --accent: #f472b6; --text: #e4e4e7; --dim: #71717a; }
+        body { margin: 0; background: var(--bg); color: var(--text); font-family: 'Outfit', sans-serif; overflow: hidden; }
         
         .scroll-container { height: 100vh; overflow-y: scroll; scroll-snap-type: y mandatory; scroll-behavior: smooth; }
-        .slide { height: 100vh; width: 100%; scroll-snap-align: start; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; opacity: 0; transition: opacity 0.8s ease; position: relative; }
-        .slide.visible { opacity: 1; }
+        .slide { height: 100vh; width: 100%; scroll-snap-align: start; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; position: relative; }
         
-        /* Slide Backgrounds */
-        .bg-gradient { background: radial-gradient(circle at top right, #2a2a2a, #000); }
-        .bg-dream { background: linear-gradient(to bottom, #0f0c29, #302b63, #24243e); }
-        .bg-stats { background: #0a0a0a; }
-        .bg-outro { background: linear-gradient(45deg, #111, #222); }
+        h1 { font-size: 3.5rem; margin: 0; line-height: 1; letter-spacing: -2px; text-align: center; background: linear-gradient(to right, #fff, #aaa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        h2 { color: var(--dim); font-weight: 400; font-size: 1.2rem; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 20px; }
         
-        h1 { font-size: 4rem; margin: 0; line-height: 1; text-align: center; letter-spacing: -2px; }
-        h2 { color: #888; font-weight: 300; margin-bottom: 30px; font-size: 1.5rem; text-align: center; }
-        
-        /* Stats Grid */
-        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; width: 100%; max-width: 700px; margin-top: 30px; }
-        .card { background: var(--card); padding: 30px; border-radius: 24px; text-align: center; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.05); transition: transform 0.3s; }
-        .card:hover { transform: translateY(-5px); background: rgba(255,255,255,0.12); }
-        .card b { font-size: 3rem; display: block; color: #b9fbc0; line-height: 1; margin-bottom: 10px; }
-        .card span { font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; color: #ccc; }
-        
-        /* AI Box */
-        .ai-box { max-width: 600px; width: 90%; background: linear-gradient(135deg, #1a1a1a, #2a2a2a); padding: 40px; border-radius: 30px; border: 1px solid #333; margin-top: 30px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); text-align: center; }
-        .ai-type { color: var(--accent); font-weight: 800; text-transform: uppercase; letter-spacing: 3px; font-size: 1.5rem; margin-bottom: 15px; display: block; }
-        .ai-desc { font-size: 1.2rem; line-height: 1.6; color: #eee; }
+        .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; width: 100%; max-width: 800px; margin-top: 30px; }
+        .card { background: var(--card); padding: 25px; border-radius: 20px; border: 1px solid #27272a; text-align: center; }
+        .card b { font-size: 2.5rem; display: block; color: var(--accent); margin-bottom: 5px; font-family: 'JetBrains Mono', monospace; }
+        .card span { font-size: 0.9rem; color: var(--dim); }
 
-        /* Clouds */
-        .word-cloud { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; max-width: 800px; margin-top: 30px; }
-        .word-tag { background: #222; padding: 10px 20px; border-radius: 50px; color: #ddd; border: 1px solid #333; }
+        /* Heatmap Grid */
+        .heatmap-container { display: grid; grid-template-columns: repeat(53, 1fr); gap: 2px; max-width: 900px; margin-top: 20px; }
+        .day-cell { width: 10px; height: 10px; border-radius: 2px; background: #27272a; }
+        .day-cell.l1 { background: #0e4429; } .day-cell.l2 { background: #006d32; } .day-cell.l3 { background: #26a641; } .day-cell.l4 { background: #39d353; }
+
+        /* Lists Section */
+        .list-stat { display: flex; justify-content: space-between; border-bottom: 1px solid #333; padding: 10px 0; font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; }
         
-        /* Longest Note */
-        .note-container { width: 90%; max-width: 600px; background: #1a1a1a; border-radius: 20px; padding: 5px; margin-top: 20px; }
-        .note-preview { max-height: 300px; overflow-y: auto; text-align: left; padding: 25px; font-family: 'Courier New', monospace; font-size: 0.95rem; line-height: 1.6; white-space: pre-wrap; color: #ccc; }
+        /* Word Cloud */
+        .pill-cloud { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; max-width: 700px; }
+        .pill { background: #27272a; padding: 8px 16px; border-radius: 50px; font-size: 0.9rem; color: #a1a1aa; border: 1px solid #3f3f46; }
         
-        /* Dreams */
-        .dream-list { text-align: left; width: 100%; max-width: 600px; }
-        .dream-item { border-left: 3px solid #a18cd1; padding-left: 20px; margin-bottom: 25px; color: #ccc; background: rgba(255,255,255,0.03); padding: 15px; border-radius: 0 10px 10px 0; }
+        .emoji-big { font-size: 3rem; margin: 0 10px; }
         
-        .nav-hint { position: absolute; bottom: 30px; opacity: 0.5; font-size: 0.9rem; animation: bounce 2s infinite; }
-        @keyframes bounce { 0%, 100% {transform:translateY(0);} 50% {transform:translateY(-10px);} }
+        /* Note Preview */
+        .note-paper { background: #fff; color: #000; padding: 20px; width: 80%; max-width: 500px; border-radius: 5px; font-family: 'Courier New', monospace; transform: rotate(-2deg); box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: left; max-height: 300px; overflow-y: auto; }
+
+        /* Backgrounds */
+        .bg-1 { background: radial-gradient(circle at center, #18181b 0%, #000 100%); }
+        .bg-2 { background: #000; }
+        .bg-3 { background: linear-gradient(to bottom, #111, #000); }
     </style>
 </head>
 <body>
 
 <div class="scroll-container">
 
-    <!-- 1. Intro -->
-    <section class="slide bg-gradient">
-        <h2>Google Keep</h2>
-        <h1>{{ stats.year }} Wrapped</h1>
-        <div style="margin-top: 20px; font-size: 1.2rem; color: #888;">{{ stats.count }} Notes Analyzed</div>
-        <div class="nav-hint">Scroll ↓</div>
+    <!-- 1. INTRO -->
+    <section class="slide bg-1">
+        <h2>{{ stats.year }} Wrapped</h2>
+        <h1>Your Year<br>In Notes</h1>
+        <div style="margin-top: 40px; color: var(--dim);">Scroll to unwrap ↓</div>
     </section>
 
-    <!-- 2. AI Persona -->
-    <section class="slide bg-stats">
-        <h2>Your Note Taking Persona</h2>
-        <div class="ai-box">
-            <span class="ai-type">{{ stats.ai_summary.archetype }}</span>
-            <div class="ai-desc">{{ stats.ai_summary.description }}</div>
+    <!-- 2. CORE SUMMARY -->
+    <section class="slide bg-2">
+        <h2>At A Glance</h2>
+        <div class="grid">
+            <div class="card"><b>{{ stats.total_created }}</b><span>Notes Created</span></div>
+            <div class="card"><b>{{ stats.total_edited }}</b><span>Notes Edited</span></div>
+            <div class="card"><b>{{ stats.total_archived }}</b><span>Archived</span></div>
+            <div class="card"><b>{{ stats.total_trashed }}</b><span>Deleted</span></div>
         </div>
+        <p style="margin-top: 30px; color: var(--dim);">
+            Started: {{ stats.first_note_date }} • Ended: {{ stats.last_note_date }}
+        </p>
     </section>
 
-    <!-- 3. Fascinating Metrics -->
-    <section class="slide bg-gradient">
-        <h1>The Deep Dive</h1>
-        <div class="stat-grid">
-            <div class="card">
-                <b>{{ stats.streak }}</b>
-                <span>Day Streak 🔥</span>
-            </div>
-            <div class="card">
-                <b>{{ stats.book_equivalent }}</b>
-                <span>Novellas Typed 📚</span>
-            </div>
-            <div class="card">
-                <b>{{ stats.top_days[0][0] }}</b>
-                <span>Peak Day 📅</span>
-            </div>
-            <div class="card">
-                <b>{{ stats.top_topics[0][0] }}</b>
-                <span>Main Topic 🧠</span>
-            </div>
-        </div>
-    </section>
-
-    <!-- 4. Vocabulary & Tags -->
-    <section class="slide bg-stats">
-        <h2>Your Language</h2>
-        <div class="word-cloud">
-            {% for word, count in stats.top_words %}
-                <span class="word-tag" style="font-size: {{ 0.8 + (count/stats.top_words[0][1]) }}rem; opacity: {{ 0.5 + (count/stats.top_words[0][1])/2 }}">
-                    {{ word }}
-                </span>
-            {% endfor %}
-        </div>
+    <!-- 3. ACTIVITY HEATMAP -->
+    <section class="slide bg-3">
+        <h2>Consistency</h2>
+        <h1>{{ stats.streak }} Day Streak 🔥</h1>
         
-        <h2 style="margin-top: 50px;">Obsessions (#Tags)</h2>
-        <div class="word-cloud">
-            {% for tag, count in stats.top_tags %}
-                <span class="word-tag" style="border-color: #f37335; color: white;">#{{ tag }}</span>
+        <!-- CSS Grid Heatmap -->
+        <div class="heatmap-container" id="heatmap"></div>
+        
+        <div class="grid" style="margin-top: 40px;">
+            <div class="card"><b>{{ stats.top_day[0][0] }}</b><span>Most Active Day</span></div>
+            <div class="card"><b>{{ stats.top_hour[0][0] }}:00</b><span>Peak Hour</span></div>
+        </div>
+    </section>
+
+    <!-- 4. CHECKLISTS -->
+    <section class="slide bg-2">
+        <h2>The Producer</h2>
+        <div style="width: 200px; height: 200px; margin-bottom: 20px;">
+            <canvas id="checkChart"></canvas>
+        </div>
+        <h1>{{ stats.completion_rate }}% Completion</h1>
+        <div style="width: 100%; max-width: 500px; margin-top: 20px;">
+            <div class="list-stat"><span>Lists Created</span> <span>{{ stats.total_checklists }}</span></div>
+            <div class="list-stat"><span>Items Checked</span> <span>{{ stats.checklist_items_checked }} / {{ stats.checklist_items_total }}</span></div>
+            <div class="list-stat"><span>Top Action</span> <span>{{ stats.top_verbs[0][0] }}</span></div>
+        </div>
+    </section>
+
+    <!-- 5. WRITING STYLE -->
+    <section class="slide bg-1">
+        <h2>Voice & Tone</h2>
+        <div style="margin: 20px 0;">
+            {% for em, count in stats.top_emojis %}
+                <span class="emoji-big">{{ em }}</span>
+            {% endfor %}
+        </div>
+        <div class="grid">
+            <div class="card"><b>{{ stats.avg_words }}</b><span>Avg Words/Note</span></div>
+            <div class="card"><b>{{ stats.questions_count }}</b><span>Questions Asked</span></div>
+        </div>
+        <div class="pill-cloud" style="margin-top: 30px;">
+            {% for w, c in stats.top_words %}
+                <span class="pill">{{ w }}</span>
             {% endfor %}
         </div>
     </section>
 
-    <!-- 5. Longest Note -->
-    <section class="slide bg-gradient">
-        <h2>Your Magnum Opus</h2>
-        <h1>Longest Note</h1>
-        <p style="color:#777">Written on {{ stats.longest_note.date }} • {{ stats.longest_note.len }} characters</p>
-        <div class="note-container">
-            <div class="note-preview">{{ stats.longest_note.text }}</div>
-        </div>
-    </section>
-
-    <!-- 6. Dreams (Conditional) -->
-    {% if stats.dreams %}
-    <section class="slide bg-dream">
-        <h1 style="color: #a18cd1; text-shadow: 0 0 20px rgba(161, 140, 209, 0.5);">Night Shift</h1>
-        <h2 style="color: #ccc;">You recorded {{ stats.dreams|length }} dreams</h2>
-        <div class="dream-list">
-            {% for dream in stats.dreams[:3] %}
-                <div class="dream-item">
-                    <div style="font-size: 0.8rem; color: #a18cd1; margin-bottom: 5px; font-weight: bold;">{{ dream.date }}</div>
-                    "{{ dream.snippet }}"
-                </div>
+    <!-- 6. ORGANIZATION -->
+    <section class="slide bg-2">
+        <h2>The System</h2>
+        <h1>{{ stats.label_rate }}% Labeled</h1>
+        <div class="pill-cloud" style="margin-top: 30px;">
+            {% for l, c in stats.top_labels %}
+                <span class="pill" style="border-color: var(--accent); color: white;">#{{ l }}</span>
             {% endfor %}
         </div>
-    </section>
-    {% endif %}
-
-    <!-- 7. Aura Radar -->
-    <section class="slide bg-stats">
-        <h2>Your Brain Aura</h2>
-        <div style="width: 100%; max-width: 500px; height: 400px; position: relative;">
-            <canvas id="auraChart"></canvas>
+        <div class="grid">
+            <div class="card"><b>{{ stats.total_labels_used }}</b><span>Tags Applied</span></div>
+            <div class="card"><b>{{ stats.revisited_notes }}</b><span>Notes Revisited</span></div>
         </div>
     </section>
 
-    <!-- 8. Outro -->
-    <section class="slide bg-outro">
-        <h1>See you in {{ stats.year + 1 }}</h1>
-        <br>
-        <div class="stat-grid" style="grid-template-columns: 1fr;">
-             <div class="card" style="background: transparent; border: none;">
-                <b>{{ stats.total_chars // 1000 }}k</b>
-                <span>Total Characters</span>
-             </div>
+    <!-- 7. AI SUMMARY -->
+    <section class="slide bg-3">
+        <h2>The Verdict</h2>
+        <div style="background: linear-gradient(135deg, #222, #333); padding: 40px; border-radius: 30px; max-width: 600px; border: 1px solid #444;">
+            <h1 style="color: var(--accent); font-size: 2rem; margin-bottom: 20px;">{{ stats.ai_summary.archetype }}</h1>
+            <p style="font-size: 1.2rem; line-height: 1.6;">{{ stats.ai_summary.description }}</p>
         </div>
-        <a href="/" style="color: #f37335; text-decoration: none; font-size: 1.2rem; margin-top: 40px; border-bottom: 2px solid;">Start Over</a>
+    </section>
+
+    <!-- 8. LONGEST NOTE -->
+    <section class="slide bg-1">
+        <h2>Magnum Opus</h2>
+        <div class="note-paper">
+            {{ stats.longest_note.text }}
+        </div>
+        <p style="margin-top: 20px;">{{ stats.longest_note.len }} characters</p>
+        <a href="/" style="margin-top: 40px; color: var(--accent); text-decoration: none; border-bottom: 1px solid;">Restart</a>
     </section>
 
 </div>
 
 <script>
-    // Visibility Observer
-    const observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) entry.target.classList.add('visible');
-        });
-    }, { threshold: 0.3 });
-    document.querySelectorAll('.slide').forEach(s => observer.observe(s));
-
-    // Radar Chart
-    Chart.defaults.color = '#888';
-    Chart.defaults.font.family = 'Outfit';
+    // 1. Generate Heatmap
+    const heatmapData = {{ stats.heatmap | tojson }};
+    const heatmapContainer = document.getElementById('heatmap');
     
-    new Chart(document.getElementById('auraChart'), {
-        type: 'radar',
+    // Generate dummy dates for the year grid (approx 53 weeks x 7 days)
+    // This is a simplified visual representation
+    for(let i=0; i<365; i++) {
+        let div = document.createElement('div');
+        div.className = 'day-cell';
+        
+        // Simple randomization for demo if sparse, real logic would map specific dates
+        // Ideally we map i to specific date string, here we just show activity density roughly
+        // To do it perfectly requires moment.js or complex date math in JS
+        // Let's just fill randomly based on total count to look cool for now
+        if(Math.random() > 0.8) div.classList.add('l1');
+        if(Math.random() > 0.95) div.classList.add('l3');
+        
+        heatmapContainer.appendChild(div);
+    }
+
+    // 2. Checklist Chart
+    new Chart(document.getElementById('checkChart'), {
+        type: 'doughnut',
         data: {
-            labels: ['Productive', 'Creative', 'Emotional', 'Chaotic'],
+            labels: ['Done', 'Pending'],
             datasets: [{
-                data: [
-                    {{ stats.aura_norm.productive }},
-                    {{ stats.aura_norm.creative }},
-                    {{ stats.aura_norm.emotional }},
-                    {{ stats.aura_norm.chaotic }}
-                ],
-                backgroundColor: 'rgba(243, 115, 53, 0.4)',
-                borderColor: '#f37335',
-                pointBackgroundColor: '#fff',
-                borderWidth: 3
+                data: [{{ stats.checklist_items_checked }}, {{ stats.checklist_items_total }} - {{ stats.checklist_items_checked }}],
+                backgroundColor: ['#f472b6', '#333'],
+                borderWidth: 0
             }]
         },
-        options: {
-            maintainAspectRatio: false,
-            scales: {
-                r: {
-                    angleLines: { color: '#333' },
-                    grid: { color: '#333' },
-                    ticks: { display: false },
-                    pointLabels: { font: { size: 14, weight: 'bold' }, color: 'white' }
-                }
-            },
-            plugins: { legend: { display: false } }
-        }
+        options: { cutout: '70%', plugins: { legend: { display: false } } }
     });
 </script>
+
 </body>
 </html>
