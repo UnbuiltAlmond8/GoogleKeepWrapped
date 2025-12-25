@@ -66,7 +66,7 @@ def is_content_safe(text):
 
 def analyze_year(extract_path, api_key=None, share_content=False):
     target_year = datetime.datetime.now().year
-    # target_year = 2024 # Uncomment for testing older zips
+    # target_year = 2024 # Uncomment for testing
     
     logger.info(f"Starting analysis for year: {target_year}")
     
@@ -74,18 +74,17 @@ def analyze_year(extract_path, api_key=None, share_content=False):
     stop_words = set(stopwords.words('english'))
     stop_words.update(['http', 'https', 'www', 'com', 'google', 'null', 'true', 'false'])
 
-    # --- THE MASSIVE STATS OBJECT ---
     stats = {
         "year": target_year,
         
         # 1. Core Summary
         "total_created": 0,
-        "total_edited": 0, # Edited this year (created anytime)
+        "total_edited": 0,
         "total_archived": 0,
         "total_trashed": 0,
         "first_note_date": None,
         "last_note_date": None,
-        "oldest_active_note": None, # Earliest created note edited this year
+        "oldest_active_note": None,
         
         # 2. Content
         "total_words": 0,
@@ -93,7 +92,7 @@ def analyze_year(extract_path, api_key=None, share_content=False):
         "word_buckets": {"Tiny (1-10)": 0, "Short (10-50)": 0, "Medium (50-200)": 0, "Long (200+)": 0},
         "emojis": Counter(),
         "common_words": Counter(),
-        "starts_with": Counter(), # "To", "Buy"
+        "starts_with": Counter(),
         "questions_count": 0,
         
         # 3. Labels
@@ -107,7 +106,7 @@ def analyze_year(extract_path, api_key=None, share_content=False):
         "total_checklists": 0,
         "checklist_items_total": 0,
         "checklist_items_checked": 0,
-        "checklist_verbs": Counter(), # "Buy", "Fix"
+        "checklist_verbs": Counter(),
         
         # 5. Media
         "total_images": 0,
@@ -116,19 +115,19 @@ def analyze_year(extract_path, api_key=None, share_content=False):
         "notes_with_media": 0,
         
         # 6. Time & Habits
-        "heatmap": defaultdict(int), # "2024-01-01": 5
+        "heatmap": defaultdict(int),
         "days_of_week": Counter(),
         "hours_of_day": Counter(),
         "months": Counter(),
-        "creation_dates": [], # For streak calc
+        "creation_dates": [],
         
-        # 7. Lifecycle & Retrieval
-        "revisited_notes": 0, # Created >30 days before edit
-        "lifespans": [], # (Edit - Create) in days
+        # 7. Lifecycle
+        "revisited_notes": 0,
+        "lifespans": [],
         
-        # 8. AI/Fun
+        # 8. AI/Fun/Dreams
         "longest_note": {"text": "", "len": 0, "date": ""},
-        "dreams": [],
+        "dream_log": [], # Stores {type: 'Dream'|'Nightmare', text: '...', date: '...'}
         "content_samples": [],
         "aura": {"productive": 0, "creative": 0, "emotional": 0, "chaotic": 0},
         "ai_summary": {"archetype": "The Mystery", "description": "AI analysis skipped."}
@@ -144,11 +143,7 @@ def analyze_year(extract_path, api_key=None, share_content=False):
                     with open(full_path, 'r', encoding='utf-8') as f:
                         data = json.load(f)
 
-                        # --- TIME HANDLING ---
-                        # Keep uses microseconds. 
-                        # createdTimestampUsec: When note was born
-                        # userEditedTimestampUsec: Last edit
-                        
+                        # Time Logic
                         c_ts = int(data.get("createdTimestampUsec", 0))
                         e_ts = int(data.get("userEditedTimestampUsec", 0))
                         
@@ -158,23 +153,20 @@ def analyze_year(extract_path, api_key=None, share_content=False):
                         is_created_this_year = created_dt.year == target_year
                         is_edited_this_year = edited_dt.year == target_year
                         
-                        # We focus on activity in the target year
                         if not is_edited_this_year and not is_created_this_year:
                             continue
 
-                        # --- 1. CORE SUMMARY ---
+                        # Core Counts
                         if is_created_this_year:
                             stats["total_created"] += 1
                             stats["heatmap"][created_dt.strftime("%Y-%m-%d")] += 1
                             stats["creation_dates"].append(created_dt.date())
                             
-                            # First/Last note
                             if stats["first_note_date"] is None or created_dt < stats["first_note_date"]:
                                 stats["first_note_date"] = created_dt
                             if stats["last_note_date"] is None or created_dt > stats["last_note_date"]:
                                 stats["last_note_date"] = created_dt
                             
-                            # Time stats
                             stats["days_of_week"][calendar.day_name[created_dt.weekday()]] += 1
                             stats["hours_of_day"][created_dt.hour] += 1
                             stats["months"][created_dt.strftime("%B")] += 1
@@ -187,94 +179,67 @@ def analyze_year(extract_path, api_key=None, share_content=False):
                         if data.get("isArchived"): stats["total_archived"] += 1
                         if data.get("isTrashed"): stats["total_trashed"] += 1
 
-                        # --- TEXT EXTRACTION ---
+                        # Text Content
                         text_body = data.get("textContent", "")
                         list_items = data.get("listContent", [])
-                        
                         list_text = " ".join([item.get("text", "") for item in list_items])
                         full_text = (text_body + " " + list_text).strip()
                         
-                        # --- 2. CONTENT INSIGHTS ---
                         word_count = len(full_text.split())
                         stats["total_words"] += word_count
                         stats["total_chars"] += len(full_text)
                         
-                        # Buckets
+                        # Bucket Stats
                         if word_count <= 10: stats["word_buckets"]["Tiny (1-10)"] += 1
                         elif word_count <= 50: stats["word_buckets"]["Short (10-50)"] += 1
                         elif word_count <= 200: stats["word_buckets"]["Medium (50-200)"] += 1
                         else: stats["word_buckets"]["Long (200+)"] += 1
                         
                         # Emojis
-                        emojis_found = emoji.emoji_list(full_text)
-                        for e in emojis_found:
+                        for e in emoji.emoji_list(full_text):
                             stats["emojis"][e['emoji']] += 1
                             
-                        # Starts with... (for text notes)
-                        if text_body:
-                            first_word = text_body.split()[0].title() if text_body.split() else ""
-                            if first_word in ["To", "Buy", "Call", "Email", "Fix", "Do", "Watch", "Read"]:
-                                stats["starts_with"][first_word] += 1
-                        
+                        # Questions
                         if "?" in full_text: stats["questions_count"] += 1
 
-                        # --- 3. LABELS ---
+                        # Labels
                         labels = data.get("labels", [])
                         if labels:
                             stats["notes_with_labels"] += 1
                             stats["total_labels_used"] += len(labels)
-                            
-                            # Label Names
                             names = sorted([l['name'] for l in labels])
-                            for name in names:
-                                stats["label_counts"][name] += 1
-                            
-                            # Combinations (if > 1 label)
-                            if len(names) > 1:
-                                combo = " + ".join(names[:2]) # Just take first 2 to avoid massive cardinality
-                                stats["label_combinations"][combo] += 1
+                            for name in names: stats["label_counts"][name] += 1
+                            if len(names) > 1: stats["label_combinations"][" + ".join(names[:2])] += 1
                         else:
                             stats["notes_without_labels"] += 1
 
-                        # --- 4. LISTS & PRODUCTIVITY ---
+                        # Checklists
                         if list_items:
                             stats["total_checklists"] += 1
                             stats["checklist_items_total"] += len(list_items)
                             checked = sum(1 for i in list_items if i.get("isChecked"))
                             stats["checklist_items_checked"] += checked
-                            
-                            # Checklist Verbs (Get first word of items)
                             for item in list_items:
                                 txt = item.get("text", "").strip()
-                                if txt:
-                                    verb = txt.split()[0].title()
-                                    if len(verb) > 2 and verb.isalpha():
-                                        stats["checklist_verbs"][verb] += 1
+                                if txt and txt.split()[0].isalpha():
+                                    stats["checklist_verbs"][txt.split()[0].title()] += 1
 
-                        # --- 5. MEDIA ---
+                        # Media
                         has_media = False
                         if data.get("attachments"):
                             for att in data["attachments"]:
                                 mime = att.get("mimetype", "")
-                                if "image" in mime: 
-                                    stats["total_images"] += 1
-                                    has_media = True
-                                elif "audio" in mime: 
-                                    stats["total_audio"] += 1
-                                    has_media = True
-                                elif "drawing" in mime: 
-                                    stats["total_drawings"] += 1
-                                    has_media = True
+                                if "image" in mime: stats["total_images"] += 1; has_media = True
+                                elif "audio" in mime: stats["total_audio"] += 1; has_media = True
+                                elif "drawing" in mime: stats["total_drawings"] += 1; has_media = True
                         if has_media: stats["notes_with_media"] += 1
 
-                        # --- 7. LIFECYCLE (Revisited) ---
+                        # Lifecycle
                         delta = edited_dt - created_dt
-                        if delta.days > 0:
-                            stats["lifespans"].append(delta.days)
-                        if delta.days > 30:
-                            stats["revisited_notes"] += 1
+                        if delta.days > 0: stats["lifespans"].append(delta.days)
+                        if delta.days > 30: stats["revisited_notes"] += 1
 
-                        # --- LONG NOTE / DREAM / AI PREP ---
+                        # Longest Note
                         if len(full_text) > stats["longest_note"]["len"]:
                             stats["longest_note"] = {
                                 "text": full_text[:400] + "..." if len(full_text) > 400 else full_text,
@@ -282,13 +247,27 @@ def analyze_year(extract_path, api_key=None, share_content=False):
                                 "date": created_dt.strftime("%B %d")
                             }
 
-                        # Dreams
+                        # --- DREAM & NIGHTMARE DETECTION ---
                         label_names = [l['name'].lower() for l in labels]
-                        is_dream = "dream" in label_names or "#dream" in full_text.lower()
-                        if is_dream and len(full_text) > 20:
-                            stats["dreams"].append({"date": created_dt.strftime("%b %d"), "snippet": full_text[:150]+"..."})
+                        full_text_lower = full_text.lower()
+                        
+                        # Heuristics
+                        is_nightmare = "nightmare" in label_names or "#nightmare" in full_text_lower
+                        is_dream = "dream" in label_names or "#dream" in full_text_lower
+                        
+                        if len(full_text) > 20:
+                            dream_type = None
+                            if is_nightmare: dream_type = "Nightmare"
+                            elif is_dream: dream_type = "Dream"
+                            
+                            if dream_type:
+                                stats["dream_log"].append({
+                                    "type": dream_type,
+                                    "date": created_dt.strftime("%b %d"),
+                                    "snippet": clean_pii(full_text[:200] + "...")
+                                })
 
-                        # Common words
+                        # Common Words
                         words = [w.lower() for w in full_text.split() if w.isalpha()]
                         clean_words = [w for w in words if w not in stop_words and len(w) > 3]
                         stats["common_words"].update(clean_words)
@@ -297,14 +276,12 @@ def analyze_year(extract_path, api_key=None, share_content=False):
                         if list_items: stats["aura"]["productive"] += 2
                         if has_media: stats["aura"]["creative"] += 3
                         if len(full_text) < 10: stats["aura"]["chaotic"] += 1
-                        
-                        # Sentiment for Aura
                         if full_text:
                             vs = analyzer.polarity_scores(full_text)
                             if vs['compound'] < -0.2: stats["aura"]["emotional"] += 2
                             
-                            # Sample for AI
-                            if share_content and is_content_safe(full_text) and len(full_text) > 30:
+                            # Content Sampling (General)
+                            if share_content and is_content_safe(full_text) and len(full_text) > 30 and not (is_dream or is_nightmare):
                                 stats["content_samples"].append(clean_pii(full_text[:300]))
 
                         files_processed += 1
@@ -312,29 +289,24 @@ def analyze_year(extract_path, api_key=None, share_content=False):
                 except Exception as e:
                     logger.error(f"Error processing {file}", exc_info=True)
 
-    # --- POST-PROCESSING CALCULATIONS ---
-    
-    if stats["total_created"] == 0:
-        return None
+    # --- POST PROCESSING ---
+    if stats["total_created"] == 0: return None
 
     # Streak
     unique_days = sorted(list(set(stats["creation_dates"])))
     streak = 0
     max_streak = 0
     for i in range(1, len(unique_days)):
-        if (unique_days[i] - unique_days[i-1]).days == 1:
-            streak += 1
-        else:
-            streak = 1
+        if (unique_days[i] - unique_days[i-1]).days == 1: streak += 1
+        else: streak = 1
         max_streak = max(max_streak, streak)
     stats["streak"] = max_streak
 
-    # Flatten Counters
+    # Flatten
     stats["top_emojis"] = stats["emojis"].most_common(5)
     stats["top_words"] = stats["common_words"].most_common(15)
     stats["top_labels"] = stats["label_counts"].most_common(5)
     stats["top_verbs"] = stats["checklist_verbs"].most_common(5)
-    stats["top_starts_with"] = stats["starts_with"].most_common(3)
     stats["top_day"] = stats["days_of_week"].most_common(1)
     stats["top_hour"] = stats["hours_of_day"].most_common(1)
     
@@ -343,37 +315,45 @@ def analyze_year(extract_path, api_key=None, share_content=False):
     stats["completion_rate"] = int((stats["checklist_items_checked"] / stats["checklist_items_total"])*100) if stats["checklist_items_total"] else 0
     stats["avg_words"] = int(stats["total_words"] / stats["total_created"]) if stats["total_created"] else 0
     
-    # Dates formatting
+    # Formats
     if stats["first_note_date"]: stats["first_note_date"] = stats["first_note_date"].strftime("%B %d")
     if stats["last_note_date"]: stats["last_note_date"] = stats["last_note_date"].strftime("%B %d")
     
-    # Normalize Aura
     total_aura = sum(stats["aura"].values()) + 1
     stats["aura_norm"] = {k: int((v/total_aura)*100) for k,v in stats["aura"].items()}
 
-    # --- GEMINI ---
+    # --- GEMINI INTEGRATION ---
     if api_key:
         try:
             genai.configure(api_key=api_key)
-            model = genai.GenerativeModel('gemini-3-flash-preview')
+            model = genai.GenerativeModel('gemini-pro')
             
             prompt_context = ""
+            
+            # 1. Add General Note Samples
             if share_content and stats["content_samples"]:
                 samples = "\n".join(random.sample(stats["content_samples"], min(10, len(stats["content_samples"]))))
-                prompt_context = f"Here are snippets from their notes:\n{samples}"
+                prompt_context += f"\n\nHere are random snippets from their general notes:\n{samples}"
             
+            # 2. Add Dream/Nightmare Samples (Specific Feature)
+            if share_content and stats["dream_log"]:
+                # Grab a few dreams/nightmares
+                dream_samples = [d['snippet'] for d in stats['dream_log'][:5]]
+                prompt_context += f"\n\nHere are entries from their Dream/Nightmare Log (analyze their subconscious): \n" + "\n".join(dream_samples)
+
             prompt = f"""
             Analyze these Google Keep stats for a "Year in Review":
             - Total Notes: {stats['total_created']}
-            - Checklist Items Completed: {stats['checklist_items_checked']} ({stats['completion_rate']}%)
+            - Checklist Completion: {stats['completion_rate']}%
             - Top Emojis: {stats['top_emojis']}
             - Top Labels: {stats['top_labels']}
+            - Dreams Recorded: {len(stats['dream_log'])}
             - Vibe: Productive={stats['aura']['productive']}, Creative={stats['aura']['creative']}, Emotional={stats['aura']['emotional']}
             
             {prompt_context}
             
-            1. Give them a funny "Archetype" name (e.g. The Chaos Coordinator).
-            2. Write a 2-sentence description of their brain.
+            1. Give them a creative "Archetype" name.
+            2. Write a 2-sentence description of their brain/subconscious.
             
             Output format: ARCHETYPE: [Name] | DESCRIPTION: [Text]
             """
@@ -420,4 +400,3 @@ def index():
 
 if __name__ == '__main__':
     app.run(debug=True)
-
