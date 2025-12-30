@@ -21,10 +21,29 @@
         .card b { font-size: 2.5rem; display: block; color: var(--accent); margin-bottom: 5px; font-family: 'JetBrains Mono', monospace; }
         .card span { font-size: 0.9rem; color: var(--dim); }
 
-        /* Heatmap Grid */
-        .heatmap-container { display: grid; grid-template-columns: repeat(53, 1fr); gap: 2px; max-width: 900px; margin-top: 20px; }
-        .day-cell { width: 10px; height: 10px; border-radius: 2px; background: #27272a; }
-        .day-cell.l1 { background: #0e4429; } .day-cell.l2 { background: #006d32; } .day-cell.l3 { background: #26a641; } .day-cell.l4 { background: #39d353; }
+        /* Heatmap Grid - Updated for accuracy */
+        .heatmap-container { 
+            display: grid; 
+            grid-template-rows: repeat(7, 1fr); /* 7 Days a week */
+            grid-auto-flow: column; /* Fill vertical first, then move right */
+            gap: 3px; 
+            height: 120px; /* Fixed height for the strip */
+            max-width: 100%;
+            overflow-x: auto; /* Allow scroll if screen is narrow */
+        }
+        
+        .day-cell { 
+            width: 10px; 
+            height: 10px; 
+            border-radius: 2px; 
+            background: #27272a; 
+        }
+        
+        /* Intensity Colors */
+        .day-cell.l1 { background: #0e4429; } /* 1 note */
+        .day-cell.l2 { background: #006d32; } /* 2 notes */
+        .day-cell.l3 { background: #26a641; } /* 3-4 notes */
+        .day-cell.l4 { background: #39d353; box-shadow: 0 0 5px #39d353; } /* 5+ notes */
 
         /* Lists */
         .list-stat { display: flex; justify-content: space-between; border-bottom: 1px solid #333; padding: 10px 0; font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; }
@@ -178,17 +197,43 @@
 </div>
 
 <script>
-    // Heatmap
+    // --- ACCURATE HEATMAP LOGIC ---
     const heatmapContainer = document.getElementById('heatmap');
-    for(let i=0; i<365; i++) {
+    const heatmapData = {{ stats.heatmap | tojson }}; // Import Python dict
+    const targetYear = {{ stats.year }};
+
+    // Helper to format date as YYYY-MM-DD (Local time to avoid UTC shifts)
+    function getKey(dateObj) {
+        const y = dateObj.getFullYear();
+        const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const d = String(dateObj.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    }
+
+    const startDate = new Date(targetYear, 0, 1); // Jan 1
+    const endDate = new Date(targetYear, 11, 31); // Dec 31
+    
+    // Iterate through every day of the year
+    for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
         let div = document.createElement('div');
         div.className = 'day-cell';
-        if(Math.random() > 0.8) div.classList.add('l1');
-        if(Math.random() > 0.95) div.classList.add('l3');
+        
+        // Get count from data
+        const dateKey = getKey(d);
+        const count = heatmapData[dateKey] || 0;
+        
+        // Add tooltip for hover
+        div.title = `${dateKey}: ${count} notes`;
+
+        // Assign Intensity Class
+        if (count === 1) div.classList.add('l1');
+        else if (count === 2) div.classList.add('l2');
+        else if (count >= 3 && count < 5) div.classList.add('l3');
+        else if (count >= 5) div.classList.add('l4');
+
         heatmapContainer.appendChild(div);
     }
 
-    // Chart
     new Chart(document.getElementById('checkChart'), {
         type: 'doughnut',
         data: {
